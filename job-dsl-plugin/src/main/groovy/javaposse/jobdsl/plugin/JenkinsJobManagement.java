@@ -37,6 +37,7 @@ import jenkins.model.ModifiableTopLevelItemGroup;
 import org.apache.commons.io.FilenameUtils;
 import org.custommonkey.xmlunit.Diff;
 import org.custommonkey.xmlunit.XMLUnit;
+import org.jenkinsci.plugins.scriptsecurity.sandbox.groovy.GroovySandbox;
 import org.jenkinsci.plugins.vSphereCloud;
 
 import javax.xml.transform.Source;
@@ -444,7 +445,10 @@ public class JenkinsJobManagement extends AbstractJobManagement {
     }
 
     private boolean updateExistingItem(AbstractItem item, javaposse.jobdsl.dsl.Item dslItem) {
-        String config = dslItem.getXml();
+        String config;
+        try (GroovySandbox.Scope scope = new GroovySandbox().enter()) {
+            config = dslItem.getXml();
+        }
 
         item.checkPermission(Item.EXTENDED_READ);
 
@@ -490,7 +494,12 @@ public class JenkinsJobManagement extends AbstractJobManagement {
             ), e);
         }
 
-        if (!oldConfig.name().equals(dslItem.getNode().name())) {
+        Object dslItemName;
+        try (GroovySandbox.Scope scope = new GroovySandbox().enter()) {
+            dslItemName = dslItem.getNode().name();
+        }
+
+        if (!oldConfig.name().equals(dslItemName)) {
             throw new DslException(format(
                     Messages.UpdateExistingItem_ItemTypeDoesNotMatch(),
                     item.getFullName()
@@ -505,7 +514,10 @@ public class JenkinsJobManagement extends AbstractJobManagement {
     }
 
     private void createNewItem(String path, javaposse.jobdsl.dsl.Item dslItem) {
-        String config = dslItem.getXml();
+        String config;
+        try (GroovySandbox.Scope scope = new GroovySandbox().enter()) {
+            config = dslItem.getXml();
+        }
         LOGGER.log(Level.FINE, format("Creating item as %s", config));
 
         try {
